@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Discord Bot Dashboard</title>
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    
+    .theme-cosmic { --bg-from: #1e1b4b; --bg-via: #111827; --bg-to: #581c87; --text: #ffffff;
+      --card1-from: #2563eb; --card1-to: #1e40af; --card2-from: #059669; --card2-to: #047857;
+      --card3-from: #7c3aed; --card3-to: #6d28d9; --card4-from: #db2777; --card4-to: #be185d;
+      --accent1: #60a5fa; --accent2: #ec4899; --border: rgba(107, 114, 128, 0.3); }
+    
+    .theme-ocean { --bg-from: #0c4a6e; --bg-via: #164e63; --bg-to: #0e7490; --text: #ffffff;
+      --card1-from: #0891b2; --card1-to: #0e7490; --card2-from: #0284c7; --card2-to: #0369a1;
+      --card3-from: #06b6d4; --card3-to: #0891b2; --card4-from: #0ea5e9; --card4-to: #0284c7;
+      --accent1: #22d3ee; --accent2: #0ea5e9; --border: rgba(34, 211, 238, 0.3); }
+    
+    .theme-sunset { --bg-from: #7c2d12; --bg-via: #991b1b; --bg-to: #9f1239; --text: #ffffff;
+      --card1-from: #ea580c; --card1-to: #dc2626; --card2-from: #f59e0b; --card2-to: #d97706;
+      --card3-from: #dc2626; --card3-to: #b91c1c; --card4-from: #db2777; --card4-to: #be185d;
+      --accent1: #fb923c; --accent2: #f87171; --border: rgba(251, 146, 60, 0.3); }
+    
+    .theme-forest { --bg-from: #14532d; --bg-via: #1e3a1f; --bg-to: #064e3b; --text: #ffffff;
+      --card1-from: #15803d; --card1-to: #166534; --card2-from: #059669; --card2-to: #047857;
+      --card3-from: #0d9488; --card3-to: #0f766e; --card4-from: #16a34a; --card4-to: #15803d;
+      --accent1: #4ade80; --accent2: #34d399; --border: rgba(74, 222, 128, 0.3); }
+    
+    .theme-neon { --bg-from: #1a1a2e; --bg-via: #16213e; --bg-to: #0f3460; --text: #ffffff;
+      --card1-from: #ff006e; --card1-to: #d90368; --card2-from: #06ffa5; --card2-to: #00d9ff;
+      --card3-from: #ffbe0b; --card3-to: #fb5607; --card4-from: #8338ec; --card4-to: #3a86ff;
+      --accent1: #06ffa5; --accent2: #ff006e; --border: rgba(255, 0, 110, 0.3); }
+    
+    .theme-candy { --bg-from: #ff9a9e; --bg-via: #fecfef; --bg-to: #fbc2eb; --text: #2d2d2d;
+      --card1-from: #ff6b9d; --card1-to: #c44569; --card2-from: #ffc3a0; --card2-to: #ffafbd;
+      --card3-from: #a8edea; --card3-to: #fed6e3; --card4-from: #d299c2; --card4-to: #fef9d7;
+      --accent1: #ff6b9d; --accent2: #a8edea; --border: rgba(196, 69, 105, 0.3); }
+    
+    .theme-midnight { --bg-from: #0f0f23; --bg-via: #1a1a3e; --bg-to: #2d2d5f; --text: #e0e0ff;
+      --card1-from: #4a5568; --card1-to: #2d3748; --card2-from: #667eea; --card2-to: #764ba2;
+      --card3-from: #f093fb; --card3-to: #f5576c; --card4-from: #4facfe; --card4-to: #00f2fe;
+      --accent1: #667eea; --accent2: #f5576c; --border: rgba(102, 126, 234, 0.3); }
+    
+    .theme-matrix { --bg-from: #0d0208; --bg-via: #1a1f0d; --bg-to: #003b00; --text: #00ff41;
+      --card1-from: #003b00; --card1-to: #008f11; --card2-from: #00ff41; --card2-to: #00d9ff;
+      --card3-from: #39ff14; --card3-to: #00ff41; --card4-from: #7fff00; --card4-to: #32cd32;
+      --accent1: #00ff41; --accent2: #39ff14; --border: rgba(0, 255, 65, 0.3); }
+    
+    body { background: linear-gradient(135deg, var(--bg-from) 0%, var(--bg-via) 50%, var(--bg-to) 100%);
+      color: var(--text); overflow: hidden; height: 100vh; width: 100vw; }
+    
+    .card { background: linear-gradient(135deg, var(--card1-from), var(--card1-to));
+      border: 1px solid var(--border); backdrop-filter: blur(10px); }
+    .card-2 { background: linear-gradient(135deg, var(--card2-from), var(--card2-to)); }
+    .card-3 { background: linear-gradient(135deg, var(--card3-from), var(--card3-to)); }
+    .card-4 { background: linear-gradient(135deg, var(--card4-from), var(--card4-to)); }
+    
+    .glass-panel { background: rgba(31, 41, 55, 0.4); backdrop-filter: blur(12px);
+      border: 1px solid var(--border); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); }
+    
+    .gradient-text { background: linear-gradient(to right, var(--accent1), var(--accent2));
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    
+    .theme-btn, .ui-btn { cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); }
+    .theme-btn:hover, .ui-btn:hover { transform: scale(1.1); box-shadow: 0 6px 20px rgba(255, 255, 255, 0.4); }
+    .theme-btn.active, .ui-btn.active { border: 3px solid white !important; transform: scale(1.15); }
+    
+    .hover-lift { transition: transform 0.3s ease; }
+    .hover-lift:hover { transform: translateY(-4px); }
+    
+    .stat-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.85; }
+    .stat-value { font-size: 1.1rem; font-weight: 700; }
+    
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+    .pulse { animation: pulse 2s ease-in-out infinite; }
+    
+    /* UI Layouts */
+    .ui-classic .card-grid { grid-template-columns: repeat(4, 1fr); }
+    .ui-classic .card { border-radius: 0.75rem; }
+    
+    .ui-compact .card-grid { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(2, 1fr); }
+    .ui-compact .card { border-radius: 0.5rem; padding: 0.75rem !important; }
+    .ui-compact .stat-label { font-size: 0.65rem; }
+    .ui-compact .stat-value { font-size: 0.95rem; }
+    
+    .ui-minimal .card-grid { grid-template-columns: repeat(4, 1fr); gap: 0.5rem; }
+    .ui-minimal .card { border-radius: 0.5rem; padding: 0.75rem !important; background: rgba(255, 255, 255, 0.05) !important; border: 1px solid rgba(255, 255, 255, 0.1); }
+    .ui-minimal .stat-label { font-size: 0.65rem; }
+    
+    .ui-cards .card-grid { grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+    .ui-cards .card { border-radius: 1.5rem; padding: 1.5rem !important; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4); }
+    .ui-cards .stat-label { font-size: 0.75rem; margin-bottom: 0.5rem; }
+    .ui-cards .stat-value { font-size: 1.5rem; }
+  </style>
+</head>
+<body class="theme-cosmic ui-classic">
+  <div class="h-full w-full flex flex-col p-4">
+    <div class="flex justify-between items-center mb-4">
+      <h1 class="text-3xl font-extrabold gradient-text">Discord Bot Dashboard</h1>
+      <div class="flex gap-4">
+        <div class="flex gap-2">
+          <button onclick="setUI('classic')" class="ui-btn active px-3 py-1 rounded-lg glass-panel text-sm font-semibold" title="Classic">Classic</button>
+          <button onclick="setUI('compact')" class="ui-btn px-3 py-1 rounded-lg glass-panel text-sm font-semibold" title="Compact">Compact</button>
+          <button onclick="setUI('minimal')" class="ui-btn px-3 py-1 rounded-lg glass-panel text-sm font-semibold" title="Minimal">Minimal</button>
+          <button onclick="setUI('cards')" class="ui-btn px-3 py-1 rounded-lg glass-panel text-sm font-semibold" title="Cards">Cards</button>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="setTheme('cosmic')" class="theme-btn active w-9 h-9 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 border-2" title="Cosmic"></button>
+          <button onclick="setTheme('ocean')" class="theme-btn w-9 h-9 rounded-full bg-gradient-to-br from-cyan-600 to-blue-800 border-2" title="Ocean"></button>
+          <button onclick="setTheme('sunset')" class="theme-btn w-9 h-9 rounded-full bg-gradient-to-br from-orange-600 to-pink-600 border-2" title="Sunset"></button>
+          <button onclick="setTheme('forest')" class="theme-btn w-9 h-9 rounded-full bg-gradient-to-br from-green-600 to-emerald-800 border-2" title="Forest"></button>
+          <button onclick="setTheme('neon')" class="theme-btn w-9 h-9 rounded-full bg-gradient-to-br from-pink-600 to-purple-600 border-2" title="Neon"></button>
+          <button onclick="setTheme('candy')" class="theme-btn w-9 h-9 rounded-full bg-gradient-to-br from-pink-400 to-purple-300 border-2" title="Candy"></button>
+          <button onclick="setTheme('midnight')" class="theme-btn w-9 h-9 rounded-full bg-gradient-to-br from-indigo-800 to-purple-900 border-2" title="Midnight"></button>
+          <button onclick="setTheme('matrix')" class="theme-btn w-9 h-9 rounded-full bg-gradient-to-br from-green-500 to-green-900 border-2" title="Matrix"></button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card-grid grid gap-3 mb-4 flex-shrink-0">
+      <div class="card p-4 rounded-xl hover-lift">
+        <p class="stat-label">Bot Username</p>
+        <p id="bot-username" class="stat-value">Loading...</p>
+      </div>
+      <div class="card card-2 p-4 rounded-xl hover-lift">
+        <p class="stat-label">Latency</p>
+        <p id="bot-ping" class="stat-value pulse">0ms</p>
+      </div>
+      <div class="card card-3 p-4 rounded-xl hover-lift">
+        <p class="stat-label">Servers</p>
+        <p id="bot-guilds" class="stat-value">0</p>
+      </div>
+      <div class="card card-4 p-4 rounded-xl hover-lift">
+        <p class="stat-label">Voice Status</p>
+        <p id="bot-voice" class="stat-value" style="font-size: 0.9rem;">Not connected</p>
+      </div>
+    </div>
+    
+    <div id="stats" class="glass-panel p-3 rounded-xl text-center mb-4 flex-shrink-0 font-semibold"></div>
+    
+    <div class="glass-panel p-4 rounded-xl flex-1 min-h-0 flex flex-col">
+      <h2 class="text-xl font-bold mb-3 gradient-text">System Performance</h2>
+      <div class="flex-1 min-h-0"><canvas id="chart"></canvas></div>
+    </div>
+  </div>
+
+  <script>
+    const socket = io();
+    const ctx = document.getElementById("chart").getContext("2d");
+    const labels = [], cpuData = [], ramData = [];
+    let currentTheme = 'cosmic';
+    let currentUI = 'classic';
+    
+    const themeColors = {
+      cosmic: { cpu: '#60a5fa', ram: '#ec4899' },
+      ocean: { cpu: '#22d3ee', ram: '#0ea5e9' },
+      sunset: { cpu: '#fb923c', ram: '#f87171' },
+      forest: { cpu: '#4ade80', ram: '#34d399' },
+      neon: { cpu: '#06ffa5', ram: '#ff006e' },
+      candy: { cpu: '#ff6b9d', ram: '#a8edea' },
+      midnight: { cpu: '#667eea', ram: '#f5576c' },
+      matrix: { cpu: '#00ff41', ram: '#39ff14' }
+    };
+
+    const chart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [{
+          label: "CPU %",
+          data: cpuData,
+          borderColor: themeColors.cosmic.cpu,
+          backgroundColor: "rgba(96, 165, 250, 0.1)",
+          fill: true,
+          tension: 0.4,
+          borderWidth: 3,
+          pointRadius: 3,
+          pointHoverRadius: 6
+        }, {
+          label: "RAM %",
+          data: ramData,
+          borderColor: themeColors.cosmic.ram,
+          backgroundColor: "rgba(236, 72, 153, 0.1)",
+          fill: true,
+          tension: 0.4,
+          borderWidth: 3,
+          pointRadius: 3,
+          pointHoverRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            labels: { color: '#e5e7eb', font: { size: 13, weight: 'bold' }, padding: 15 }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            padding: 12,
+            titleFont: { size: 14 },
+            bodyFont: { size: 13 }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            max: 100,
+            ticks: { color: '#9ca3af', font: { size: 11 } },
+            grid: { color: 'rgba(255, 255, 255, 0.08)' }
+          },
+          x: {
+            ticks: { color: '#9ca3af', font: { size: 10 }, maxRotation: 0 },
+            grid: { color: 'rgba(255, 255, 255, 0.08)' }
+          }
+        },
+        interaction: { intersect: false, mode: 'index' }
+      }
+    });
+
+    function setTheme(theme) {
+      currentTheme = theme;
+      document.body.className = `theme-${theme} ui-${currentUI}`;
+      document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      
+      const colors = themeColors[theme];
+      chart.data.datasets[0].borderColor = colors.cpu;
+      chart.data.datasets[0].backgroundColor = hexToRgba(colors.cpu, 0.1);
+      chart.data.datasets[1].borderColor = colors.ram;
+      chart.data.datasets[1].backgroundColor = hexToRgba(colors.ram, 0.1);
+      chart.update('none');
+    }
+
+    function setUI(ui) {
+      currentUI = ui;
+      document.body.className = `theme-${currentTheme} ui-${ui}`;
+      document.querySelectorAll('.ui-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+    }
+
+    function hexToRgba(hex, alpha) {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    socket.on("stats", (data) => {
+      const time = new Date().toLocaleTimeString();
+      labels.push(time);
+      if (labels.length > 20) labels.shift();
+
+      cpuData.push(data.cpu);
+      if (cpuData.length > 20) cpuData.shift();
+
+      ramData.push(data.ram);
+      if (ramData.length > 20) ramData.shift();
+
+      chart.update('none');
+
+      document.getElementById("stats").innerHTML =
+        `CPU: <strong>${data.cpu}%</strong> | RAM: <strong>${data.usedMem}/${data.totalMem} GB</strong> (${data.ram}%) | Uptime: <strong>${Math.floor(data.uptime / 60)}m</strong> | OS: <strong>${Math.floor(data.osUptime / 3600)}h</strong>`;
+
+      document.getElementById("bot-username").innerText = data.username || "Unknown";
+      document.getElementById("bot-ping").innerText = data.ping ? data.ping + "ms" : "0ms";
+      document.getElementById("bot-guilds").innerText = data.guilds || 0;
+      document.getElementById("bot-voice").innerText = data.voiceChannel || "Not connected";
+    });
+  </script>
+</body>
+</html>
