@@ -18,7 +18,7 @@ client.once(Events.ClientReady, async () => {
   // 24/7 voice join
   try {
     const connection = joinVoiceChannel({
-      channelId: "1408570474992242792",
+      channelId: "YOUR_VOICE_CHANNEL_ID",
       guildId: config.guildId,
       adapterCreator: client.guilds.cache.get(config.guildId).voiceAdapterCreator,
       selfDeaf: false,
